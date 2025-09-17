@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import SideBar from "@/components/SideBar";
+import BarcodeScanner from "@/components/BarcodeScanner"; // Add this import
 import { 
   Package, Plus, Edit, Trash2, Search, Filter, Download, 
   AlertTriangle, CheckCircle, TrendingDown, TrendingUp,
-  User, LogOut, Shield, BarChart3, DollarSign
+  User, LogOut, Shield, BarChart3, DollarSign, Camera // Add Camera import
 } from "lucide-react";
 import { 
   getProducts, 
@@ -31,6 +32,8 @@ const InventoryPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false); // Add scanner state
+  const [scannerTarget, setScannerTarget] = useState<'search' | 'add' | 'edit'>('search'); // Track which field to update
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [newProduct, setNewProduct] = useState({
     barcode: '',
@@ -118,6 +121,24 @@ const InventoryPage: React.FC = () => {
     }
 
     setFilteredProducts(filtered);
+  };
+
+  // Handle barcode scan results
+  const handleBarcodeScan = (scannedValue: string) => {
+    if (scannerTarget === 'search') {
+      setSearchQuery(scannedValue);
+    } else if (scannerTarget === 'add') {
+      setNewProduct({ ...newProduct, barcode: scannedValue });
+    } else if (scannerTarget === 'edit') {
+      setNewProduct({ ...newProduct, barcode: scannedValue });
+    }
+    setShowBarcodeScanner(false);
+  };
+
+  // Open scanner for different targets
+  const openBarcodeScanner = (target: 'search' | 'add' | 'edit') => {
+    setScannerTarget(target);
+    setShowBarcodeScanner(true);
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -282,6 +303,13 @@ const InventoryPage: React.FC = () => {
         </div>
       )}
 
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+        onScan={handleBarcodeScan}
+      />
+
       {/* Top Bar */}
       <div className="fixed top-0 left-20 right-0 bg-slate-grey/95 backdrop-blur-xl border-b border-light-grey/20 z-30 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -361,10 +389,18 @@ const InventoryPage: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Search products..."
-                  className="input pl-10"
+                  className="input pl-10 pr-12"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {/* Camera icon for search */}
+                <button
+                  onClick={() => openBarcodeScanner('search')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-light-grey/20 rounded transition-colors duration-200"
+                  title="Scan barcode to search"
+                >
+                  <Camera className="w-4 h-4 text-warm-grey hover:text-maroon" />
+                </button>
               </div>
               
               <select
@@ -433,7 +469,7 @@ const InventoryPage: React.FC = () => {
                           <span className="text-off-white font-medium">{product.stock || 0}</span>
                           <button
                             onClick={() => openStockModal(product)}
-                            className="text-maroon hover:text-light-maroon text-sm"
+                            className="text-xs px-2 py-1 bg-maroon/20 hover:bg-maroon/30 text-maroon rounded transition-colors duration-200"
                           >
                             Adjust
                           </button>
@@ -441,22 +477,25 @@ const InventoryPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}>
-                          {stockStatus.status.toUpperCase()}
+                          {stockStatus.status === 'out' ? 'Out of Stock' : 
+                           stockStatus.status === 'low' ? 'Low Stock' : 'In Stock'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => openEditModal(product)}
-                            className="p-2 text-maroon hover:bg-maroon/20 rounded-lg transition-colors duration-200"
+                            className="p-2 hover:bg-light-grey/20 rounded-lg transition-colors duration-200"
+                            title="Edit product"
                           >
-                            <Edit size={16} />
+                            <Edit size={16} className="text-warm-grey hover:text-off-white" />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(product)}
-                            className="p-2 text-error-red hover:bg-error-red/20 rounded-lg transition-colors duration-200"
+                            className="p-2 hover:bg-error-red/20 rounded-lg transition-colors duration-200"
+                            title="Delete product"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={16} className="text-warm-grey hover:text-error-red" />
                           </button>
                         </div>
                       </td>
@@ -465,14 +504,6 @@ const InventoryPage: React.FC = () => {
                 })}
               </tbody>
             </table>
-            
-            {filteredProducts.length === 0 && (
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 text-warm-grey mx-auto mb-4" />
-                <p className="text-warm-grey text-lg">No products found</p>
-                <p className="text-warm-grey/60">Try adjusting your search or filters</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -495,14 +526,38 @@ const InventoryPage: React.FC = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-warm-grey mb-2">Category</label>
+                  <select 
+                    className="input"
+                    value={newProduct.categoryId} 
+                    onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                  >
+                    <option value="">Select category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-warm-grey mb-2">Barcode</label>
-                  <input 
-                    className="input" 
-                    placeholder="Enter barcode" 
-                    value={newProduct.barcode} 
-                    onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })} 
-                    required 
-                  />
+                  <div className="relative">
+                    <input 
+                      className="input pr-12" 
+                      placeholder="Enter barcode" 
+                      value={newProduct.barcode} 
+                      onChange={e => setNewProduct({ ...newProduct, barcode: e.target.value })} 
+                      required 
+                    />
+                    {/* Camera icon for add modal */}
+                    <button
+                      type="button"
+                      onClick={() => openBarcodeScanner('add')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-light-grey/20 rounded transition-colors duration-200"
+                      title="Scan barcode"
+                    >
+                      <Camera className="w-4 h-4 text-warm-grey hover:text-maroon" />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-warm-grey mb-2">Price</label>
@@ -724,4 +779,3 @@ const InventoryPage: React.FC = () => {
 };
 
 export default InventoryPage;
-
