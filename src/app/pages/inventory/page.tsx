@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import SideBar from "@/components/SideBar";
-import BarcodeScanner from "@/components/BarcodeScanner"; // Add this import
+import BarcodeScanner from "@/components/BarcodeScanner"; // Added this import
 import { 
   Package, Plus, Edit, Trash2, Search, Filter, Download, 
   AlertTriangle, CheckCircle, TrendingDown, TrendingUp,
-  User, LogOut, Shield, BarChart3, DollarSign, Camera // Add Camera import
+  User, LogOut, Shield, BarChart3, DollarSign, Camera // Added Camera import
 } from "lucide-react";
 import { 
   getProducts, 
